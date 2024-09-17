@@ -41,7 +41,7 @@ class MainActivity : AppCompatActivity() {
 
     private fun fetchSchedule(): List<String> {
         val scheduleItems = mutableListOf<String>()
-        
+
         try {
             // URL расписания
             val url = "https://www.chtotib.ru/schedule_gl/cg60.htm"
@@ -83,7 +83,7 @@ class MainActivity : AppCompatActivity() {
                         }
                         scheduleItems.addAll(periods)
                         periods.clear()
-                        scheduleItems.add("") // Добавляем пустую строку между днями
+                        scheduleItems.add("") // Добавляем пустую строку между днямиx
                     }
                     continue
                 }
