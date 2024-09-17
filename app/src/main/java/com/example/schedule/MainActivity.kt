@@ -53,90 +53,90 @@ class MainActivity : AppCompatActivity() {
             val rows = document.select("tr")
 
             var currentDate: String? = null
-            val periods = mutableListOf<String>()
+            var previousDigit: String? = null
+            var lineCounter = 0
 
             for (row in rows) {
-
+                if (lineCounter < 13) {
+                    // Пропускаем первые 13 строк
+                    lineCounter++
+                    continue
+                }
 
                 val cells = row.select("td")
 
                 // Пропускаем строки, содержащие только &nbsp;
                 if (cells.isNotEmpty() && cells.all { it.text().trim() == "&nbsp;" }) {
+                    if (previousDigit != null) {
+                        // Не добавляем цифру, если после нее идет пустая строка
+                        previousDigit = null
+                    }
                     continue
                 }
 
                 // Пропускаем строки с классом "nul" и пустым содержимым
                 if (cells.size == 1 && cells[0].hasClass("nul") && cells[0].text().trim().isEmpty()) {
-                    continue
-                }
-
-                // Пропускаем строки, которые содержат только цифру и пустое содержимое
-                if (cells.size == 2 && cells[0].hasClass("hd") && cells[1].text().trim().isEmpty()) {
+                    if (previousDigit != null) {
+                        // Не добавляем цифру, если после нее идет строка с классом "nul"
+                        previousDigit = null
+                    }
                     continue
                 }
 
                 // Обработка строки-разделителя для конца дня
                 if (cells.size == 1 && cells[0].hasClass("hd0")) {
-                    if (periods.isNotEmpty()) {
-                        if (currentDate != null) {
-                            scheduleItems.add("Расписание на $currentDate:")
-                        }
-                        scheduleItems.addAll(periods)
-                        periods.clear()
-                        scheduleItems.add("") // Добавляем пустую строку между днямиx
+                    if (currentDate != null) {
+                        scheduleItems.add("Расписание на $currentDate:")
                     }
+                    scheduleItems.add("") // Добавляем пустую строку между днями
+                    previousDigit = null // Сбрасываем предыдущую цифру
                     continue
                 }
 
                 // Обработка строки с датой и днем недели
                 if (cells.size > 1 && cells[0].text().matches(Regex("\\d{2}\\.\\d{2}\\.\\d{4}"))) {
-                    if (periods.isNotEmpty()) {
-                        if (currentDate != null) {
-                            scheduleItems.add("Расписание на $currentDate:")
+                    if (currentDate != null) {
+                        if (previousDigit != null) {
+                            scheduleItems.add(previousDigit) // Добавляем запомненную цифру перед новой датой
+                            previousDigit = null
                         }
-                        scheduleItems.addAll(periods)
-                        periods.clear()
+                        scheduleItems.add("Расписание на $currentDate:")
                     }
                     currentDate = cells[0].text().trim()
-                    // Добавляем дату и день недели как отдельную строку
                     scheduleItems.add("$currentDate")
                     scheduleItems.add("") // Добавляем пустую строку после даты
                     continue
                 }
 
                 // Обработка строки с данными пары
-                if (cells.size >= 2 && cells[0].hasClass("hd")) {
-                    val period = cells[0].text().trim()
-                    val description = cells.getOrNull(1)?.text()?.trim() ?: ""
-                    val additionalInfo = cells.getOrNull(2)?.text()?.trim() ?: ""
-
-                    val scheduleText = buildString {
-                        append("$period. $description")
-                        if (additionalInfo.isNotEmpty()) {
-                            append(" $additionalInfo")
-                        }
-                    }.trim()
-
-                    if (scheduleText.isNotEmpty()) {
-                        if (cells.size == 4) {  // Обработка пар с подгруппами
-                            val secondDescription = cells.getOrNull(3)?.text()?.trim() ?: ""
-                            if (secondDescription.isNotEmpty()) {
-                                val updatedScheduleText = "$scheduleText / $secondDescription"
-                                periods.add(updatedScheduleText)
+                for (cell in cells) {
+                    val cellText = cell.text().trim()
+                    if (cellText.isNotEmpty() && cellText != "&nbsp;") {
+                        if (cellText.matches(Regex("\\d+"))) {
+                            if (previousDigit != null) {
+                                // Не добавляем предыдущую цифру, если после нее идет пустая строка
+                                previousDigit = cellText
+                            } else {
+                                // Запоминаем текущую цифру
+                                previousDigit = cellText
                             }
                         } else {
-                            periods.add(scheduleText)
+                            if (previousDigit != null) {
+                                scheduleItems.add(previousDigit) // Добавляем запомненную цифру перед текстом
+                                previousDigit = null
+                            }
+                            scheduleItems.add(cellText)
                         }
                     }
                 }
             }
 
             // Добавляем оставшиеся элементы
-            if (periods.isNotEmpty()) {
-                if (currentDate != null) {
-                    scheduleItems.add("Расписание на $currentDate:")
+            if (currentDate != null) {
+                if (previousDigit != null) {
+                    scheduleItems.add(previousDigit) // Добавляем запомненную цифру перед концом
                 }
-                scheduleItems.addAll(periods)
+                scheduleItems.add("Расписание на $currentDate:")
             }
 
         } catch (e: Exception) {
